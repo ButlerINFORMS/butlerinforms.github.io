@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"name": "butlerinforms.github.io",
+			"path": "."
+		}
+	],
+	"settings": {
+		"liveServer.settings.multiRootWorkspaceName": "butlerinforms.github.io"
+	}
+}
