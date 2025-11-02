@@ -1,14 +1,45 @@
+/* Years bar — use the same base navbar look, but box-style like your top items */
+.navbar.years {
+    display: flex;
+    gap: 10px;
+    justify-content: center; /* center the year boxes */
+    margin: 10px 0;
+}
+
+.navbar.years a {
+    background: #ffffff; /* same white box used in top area */
+    color: #000000;
+    padding: 8px 14px;
+    border-radius: 6px;
+    text-decoration: none;
+    font-weight: 600;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.08);
+}
+
+/* hover/active states to match main navbar behavior */
+.navbar.years a:hover,
+.navbar.years a:focus {
+    background: #f0f0f0;
+    color: #000;
+}
+
+/* optional: smaller at mobile widths */
+@media (max-width: 600px) {
+    .navbar.years { gap: 6px; }
+    .navbar.years a { padding: 6px 10px; font-size: 14px; }
+}
+
 .navbar2 {
     padding: 3px 3px;
     font-family: Cambria, Georgia, serif;
     font-size: 100%;
-    color: black;
+    color: #13294B;
     text-align: center;
-    background-color: #fdfefe; /* match .navbar */ 
+    background-color: #f8faff;/* match .navbar */ 
     min-height: 20px;
     line-height: 30px;
     margin-bottom: 0px;
-    margin-top: -13px;
+    margin-top: -px;
     margin-left: -1px;
     margin-right: -1px;  
     width: 100%;
@@ -54,7 +85,7 @@
     font-size: 100%;
     color: #13294B;
     text-align: center;
-    background-color: #00A3E0;
+    background-color: #ffffff;
     min-height: 20px;
     line-height: 30px;
     margin-bottom: -110px;
@@ -513,6 +544,13 @@ a:hover {
 }
 @keyframes blinker {
     50% { opacity: 0; }
+}
+.blink-highlight2 {
+    font-weight: bold;
+    background-color: #f8faff;
+    padding: 2px 6px;
+    border-radius: 4px;
+    animation: blinker 3s linear infinite;
 }
 .event-calendar {
     width: 1000px;
