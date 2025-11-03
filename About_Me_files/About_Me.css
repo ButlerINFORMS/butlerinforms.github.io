@@ -1,14 +1,15 @@
 /* Years bar — use the same base navbar look, but box-style like your top items */
 .navbar.years {
     display: flex;
+    color: #13294B;
     gap: 10px;
     justify-content: center; /* center the year boxes */
     margin: 10px 0;
 }
 
 .navbar.years a {
-    background: #ffffff; /* same white box used in top area */
-    color: #000000;
+    background: #00A3E0; /* same white box used in top area */
+    color: #13294B;
     padding: 8px 14px;
     border-radius: 6px;
     text-decoration: none;
@@ -19,8 +20,8 @@
 /* hover/active states to match main navbar behavior */
 .navbar.years a:hover,
 .navbar.years a:focus {
-    background: #f0f0f0;
-    color: #000;
+    background: #00A3E0;
+    color: #13294B;
 }
 
 /* optional: smaller at mobile widths */
@@ -35,7 +36,7 @@
     font-size: 100%;
     color: #13294B;
     text-align: center;
-    background-color: #f8faff;/* match .navbar */ 
+    background-color: #00A3E0; /* Butler light blue color */
     min-height: 20px;
     line-height: 30px;
     margin-bottom: 0px;
@@ -45,12 +46,13 @@
     width: 100%;
     white-space: nowrap;
     overflow-x: auto;
-    /*border-top: 2px solid #00A3E0;*/
-    /*border-bottom: 2px solid #00A3E0;*/
+    border-top: 2px solid #13294B;
+    border-bottom: 2px solid #13294B;
 
 }
-.navbar2 a {
-    color: black; /* match .navbar */
+.navbar2 a,
+.navbar2 a:visited {
+    color: #13294B !important; /* Butler dark blue color with !important */
     text-decoration: none;
     padding: 1px 12px;
     margin: 0 2px;
@@ -59,14 +61,15 @@
     border-radius: 1px;
     transition: background-color 0.3s, color 0.3s;
     text-align: center;
-    outline: 2px solid black; /* match .navbar */
+    outline: 2px solid black;
     font-family: Cambria, Georgia, serif;
+    background-color: #ffffff;
 }
 
 .navbar2 a:hover,
 .navbar2 a.active {
     background-color: #00A3E0;
-    color: #fff;
+    color: #ffffff !important;
 }
 .flickr-gallery {
     display: flex;
@@ -85,7 +88,7 @@
     font-size: 100%;
     color: #13294B;
     text-align: center;
-    background-color: #ffffff;
+    background-color: #00A3E0;
     min-height: 20px;
     line-height: 30px;
     margin-bottom: -110px;
@@ -112,7 +115,7 @@
 /* Ensure navbar links always use #13294B, even after being visited */
 .navbar a,
 .navbar a:visited {
-    background-color: #fff;   /* Black box for each link */
+    background-color: #ffffff;   /* Black box for each link */
     color: #13294B;
     text-decoration: none;
     padding: 1px 12px; /* Reduce padding to make links narrower */
@@ -433,7 +436,7 @@ a.class1:hover {
     text-decoration: underline;
 }
 a:hover {
-	color: rgb(255,0,0);
+	color: #d4d117;
 	text-decoration: none;
 }
 .bumper {
@@ -595,7 +598,7 @@ a:hover {
 .add-calendar-btn {
     display: inline-block;
     padding: 6px 12px;
-    background: #0074c2;
+    background: #13294B;
     color: #fff;
     border-radius: 4px;
     text-decoration: none;
