@@ -166,6 +166,12 @@ h3{font-size:24px;font-weight:750;letter-spacing:-.025em}
 .event-media{background:#071a35;min-height:260px;display:flex;align-items:center;justify-content:center;overflow:hidden}
 .event-media img{width:100%;height:100%;object-fit:cover}
 .event-card.recap .event-media img{object-fit:contain;background:#071a35}
+.flyer-expand{display:flex;width:100%;padding:0;border:0;background:transparent;cursor:zoom-in}
+.flyer-lightbox{width:fit-content;max-width:96vw;max-height:96vh;padding:12px;border:1px solid #cbd5df;background:#071a35;overflow:auto}
+.flyer-lightbox::backdrop{background:rgba(7,26,53,.86)}
+.flyer-lightbox-actions{display:flex;justify-content:flex-end;margin-bottom:8px}
+.flyer-lightbox-close{padding:7px 12px;border:1px solid white;background:var(--butler-blue);color:white;font-weight:700;cursor:pointer}
+.flyer-lightbox>img{display:block;width:auto;height:auto;max-width:calc(96vw - 26px);max-height:88vh;object-fit:contain}
 .event-body{padding:31px 34px}
 .event-date{font-size:14px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--fountain);margin-bottom:10px}
 .event-body h2{font-size:34px;letter-spacing:-.035em;margin-bottom:15px}
