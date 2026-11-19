@@ -15,32 +15,26 @@
   2. Add this navigation link to the existing club pages:
        <a href="MISTA_Challenge.html">MISTA Challenge</a>
   3. Set TALLY_FORM_URL below to your published Tally form's Share URL.
-  4. In Google Data Studio, connect only to a separate, approved scoreboard
-     containing opt-in display names or aliases and reviewed points. Never use
-     the intake workbook as the public report source. After verifying the
-     report fields and sharing settings, choose File > Embed report, enable
-     embedding, and copy ONLY the generated iframe src into
-     LEADERBOARD_EMBED_URL. An ordinary report share link is not an embed URL.
-     Both datastudio.google.com and lookerstudio.google.com are supported.
-  5. Optional: set LEADERBOARD_VIEW_URL to the ordinary report URL.
-     If omitted, a view URL is derived from the valid embed URL.
-  6. Finalize the proposed activity values and dates in the HTML, then set
+  4. After the Apps Script updates MISTA_Leaderboard, verify public opt-in and
+     copy only the round, display name or alias, approved category totals, and
+     total into data/mista-leaderboard.json. Update snapshotDate and publish
+     the site. Never copy emails, evidence links, or raw intake rows.
+  5. Finalize the proposed activity values and dates in the HTML, then set
      SHOW_DRAFT_NOTICE to false. That switch hides ONLY the top notice;
      edit the other visible "proposed" labels when the rules are approved.
 
-  With empty URLs, the page deliberately shows unavailable states. Its
-  "Update my points" navigation links lead to the submission section.
-  They become real external Tally links when a valid form URL is supplied.
-  No names, scores, submissions or refresh timestamps are simulated.
+  If the snapshot cannot load, the page shows an unavailable state. Its
+  "Update my points" navigation links become external Tally links when a valid
+  form URL is supplied.
+  The public leaderboard is a static, dated snapshot. It does not expose or
+  query the private spreadsheet.
 
   PUBLIC DATA BOUNDARY
-  Connect the report only to a separate, approved scoreboard spreadsheet.
   Publish only reviewed, approved points for students who explicitly opt in
   to public listing. Keep new submissions private until review. Never include
   names without permission, emails, evidence links, certificates, account
   information, private sheet URLs, credentials or secrets in this HTML or the
-  public reporting dataset. Sharing a report does not require sharing its
-  evidence workbook.
+  public snapshot. The private evidence workbook is never a public data source.
 
   BRAND SOURCES
   Butler University Brand Standards, July 2026: wordmark pp.36/38,
@@ -59,14 +53,12 @@
 
   INTEGRATION REFERENCES
   https://tally.so/help/create-a-form
-  https://docs.cloud.google.com/data-studio/embed-a-report
   https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages
   -->
   <script>
     window.MISTA_CONFIG = Object.freeze({
       TALLY_FORM_URL: "https://tally.so/r/5X9Ybb",
-      LEADERBOARD_EMBED_URL: "",
-      LEADERBOARD_VIEW_URL: "",
+      LEADERBOARD_SNAPSHOT_URL: "data/mista-leaderboard.json",
       SHOW_DRAFT_NOTICE: false
     });
   </script>
@@ -195,8 +187,17 @@
     .board-heading h3 {font-size:20px}
     .status-label {display:inline-flex;align-items:center;gap:7px;font-size:16px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;line-height:1.4;background:var(--slate);color:var(--butler);padding:7px 10px;white-space:nowrap}
     .status-label .dot {width:6px;height:6px;border-radius:50%;background:var(--fountain);flex:none}
-    .board-columns {display:grid;grid-template-columns:65px 1.7fr repeat(4,1fr);gap:12px;font-size:16px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#556675;border-bottom:1px solid #e4eaf0;padding:15px 28px}
-    .board-columns span:nth-child(n+3) {text-align:right}
+    .board-round {padding:20px 28px 0}
+    .board-round h4 {font-size:20px;margin-bottom:12px}
+    .board-table-wrap {overflow-x:auto}
+    .board-table {width:100%;min-width:700px;border-collapse:collapse;font-size:16px}
+    .board-table th,.board-table td {padding:13px 10px;border-bottom:1px solid #e4eaf0;text-align:right}
+    .board-table thead th {font-size:15px;letter-spacing:.04em;text-transform:uppercase;color:#556675}
+    .board-table th:first-child,.board-table td:first-child {width:65px;text-align:left}
+    .board-table th:nth-child(2),.board-table td:nth-child(2) {text-align:left}
+    .board-table tbody th {font-weight:700}
+    .board-table tbody tr:last-child th,.board-table tbody tr:last-child td {border-bottom:0}
+    .board-updated {padding:16px 28px 0;color:#475869;font-size:15px}
     .board-empty {padding:46px 25px 50px;display:flex;align-items:center;text-align:center;flex-direction:column}
     .board-symbol {width:68px;height:68px;background:var(--sky);display:grid;place-items:center;border-radius:50%;color:var(--butler);margin-bottom:22px}
     .board-symbol .icon {width:35px;height:35px;stroke-width:1.3}
@@ -206,8 +207,7 @@
     .board-footer {display:flex;gap:15px;align-items:center;justify-content:space-between;padding:16px 28px;border-top:1px solid #e4eaf0;color:#475869;font-size:16px;flex-wrap:wrap}
     .board-footer span {display:flex;align-items:center;gap:7px}
     .board-footer .icon {width:15px;height:15px}
-    .report-frame {display:block;width:100%;height:760px;min-height:600px;border:0;background:var(--white)}
-    .board-help {font-size:16px;color:#475869;line-height:1.6;padding:14px 28px;border-top:1px solid #d8e1e9}
+    .board-error {padding:30px 28px;color:#475869;font-size:16px}
     .catalog-section {background:var(--white)}
     .catalog-heading {max-width:760px;margin-bottom:27px}
     .catalog-heading h2 {margin-bottom:16px}
@@ -356,7 +356,7 @@
       .intro-heading {grid-template-columns:1fr;gap:20px;margin-bottom:29px}.intro-heading h2 {max-width:350px}.intro-heading p {font-size:16px}
       .steps {grid-template-columns:1fr}.step,.step+.step {border-left:0;display:grid;grid-template-columns:38px 1fr;gap:0 15px;padding:24px 0;border-bottom:1px solid #c3c9cc}.step-number {grid-row:1/3;margin:0;font-size:28px}.step h3 {font-size:20px;margin-bottom:8px}.step p {grid-column:2;font-size:16px;max-width:none}
       .section-head {flex-direction:column;align-items:flex-start;gap:18px;margin-bottom:25px}.section-head p {max-width:none;font-size:16px}
-      .board-heading {padding:19px 18px;gap:12px}.board-heading h3 {font-size:17px}.status-label {font-size:16px;padding:6px 8px}.board-columns {grid-template-columns:32px 1fr 45px;padding:14px 18px;font-size:16px;gap:10px}.board-columns span:nth-child(3),.board-columns span:nth-child(4),.board-columns span:nth-child(5) {display:none}.board-empty {padding:37px 20px}.board-empty h3 {font-size:23px}.board-empty p {font-size:16px}.board-footer {padding:15px 18px;font-size:16px;gap:8px}.board-footer span {width:100%}.board-help {padding:14px 18px;font-size:16px}.report-frame {height:680px;min-height:560px}
+      .board-heading {padding:19px 18px;gap:12px}.board-heading h3 {font-size:17px}.status-label {font-size:16px;padding:6px 8px}.board-round {padding:18px 18px 0}.board-round h4 {font-size:18px}.board-table th,.board-table td {padding:12px 8px}.board-updated {padding:14px 18px 0;font-size:15px}.board-empty {padding:37px 20px}.board-empty h3 {font-size:23px}.board-empty p {font-size:16px}.board-footer {padding:15px 18px;font-size:16px;gap:8px}.board-footer span {width:100%}.board-error {padding:24px 18px}
       .search-row {align-items:flex-start;flex-direction:column;gap:15px}.search-field {width:100%;max-width:none}.search-field input {font-size:16px}.filter-tabs {gap:7px}.filter-tab {font-size:16px;padding:9px 11px}.filter-check {font-size:16px}.catalog-heading p {font-size:16px}
       .activity summary {grid-template-columns:1fr 64px 14px;gap:12px;padding:20px 3px 20px 0}.activity-title {font-size:16px}.activity-points {font-size:24px}.activity-points small {font-size:16px}.activity-meta {font-size:16px;gap:5px 8px}.activity-body {grid-template-columns:1fr;padding:0 27px 21px 0;gap:15px;font-size:16px}.catalog-note {font-size:16px}.catalog-meta {font-size:16px;gap:10px}.clear-filters {font-size:16px}.data4good {padding:25px 24px;gap:22px;margin-top:33px}.data4good h3 {font-size:24px;line-height:1.15}
       .rounds {grid-template-columns:1fr;gap:20px}.round {padding:24px}.round-label h3 {font-size:28px}.round dl div {grid-template-columns:110px 1fr;gap:17px}.round dd {font-size:16px}.date-note {font-size:16px}
@@ -391,7 +391,6 @@
     .cap-row {font-size:16px;line-height:1.4}
     .cap-row strong {font-size:20px}
     .board-heading {flex-wrap:wrap}
-    .board-columns {grid-template-columns:70px minmax(0,1.65fr) repeat(4,minmax(0,1fr));letter-spacing:0;text-transform:none}
     .board-footer span {align-items:flex-start}
     .board-footer .icon {width:18px;height:18px;margin-top:3px}
     .activity summary {grid-template-columns:minmax(0,1fr) 130px 24px}
@@ -485,8 +484,6 @@
       .badge-pathway {padding:27px 25px}
       .search-row {align-items:flex-start;flex-direction:column;gap:15px}
       .search-field {width:100%;max-width:none}
-      .board-columns {grid-template-columns:60px minmax(0,1fr) 65px;gap:10px}
-      .board-columns span:nth-child(3),.board-columns span:nth-child(4),.board-columns span:nth-child(5) {display:none}
     }
     @media(max-width:620px) {
       .header-inner {gap:12px}
@@ -537,7 +534,7 @@
     }
 
     @media print {
-      .site-header,.utility,.draft-notice,.hero-actions,.catalog-controls,.catalog-meta,.catalog-bottom .btn,.mobile-bottom,.footer,.report-frame,.submit-card .btn,.data4good .btn,.clear-filters {display:none!important}
+      .site-header,.utility,.draft-notice,.hero-actions,.catalog-controls,.catalog-meta,.catalog-bottom .btn,.mobile-bottom,.footer,.submit-card .btn,.data4good .btn,.clear-filters {display:none!important}
       html,body {background:white;color:black}.wrap {width:100%}.section {padding:25px 0}.hero {background:white;color:black;padding:0 0 20px}.hero h1 span:last-child,.hero .kicker,.hero-copy,.hero-tagline,.hero-facts {color:black}.hero h1 {font-size:55px}.hero-grid {grid-template-columns:1fr 1fr;gap:35px}.score-card {background:#f0f2f5;clip-path:none}.score-number {font-size:80px}.hero-facts {display:none}.activity[hidden] {display:block!important}.activity-body {display:grid!important}.catalog-list {margin-top:10px}.activity summary {padding:12px 0}.activity {break-inside:avoid}.submission {background:white;color:black}.submission-copy,.submission .kicker,.submission-checklist {color:black}.submission-grid {gap:25px}.submit-card {border:1px solid #aaa;clip-path:none}.board {box-shadow:none}.section-head,.rounds,.faq-item,.rules-content>div {break-inside:avoid}.faq-answer,.rules-content {display:block!important}.rules-content>div {margin-bottom:18px}.faq-grid {display:block}.faq-intro {margin-bottom:25px}h2 {font-size:30px}
     }
   </style>
@@ -593,15 +590,6 @@
       </div>
     </section>
 
-    <section class="section study-section" id="study-surveys" aria-labelledby="study-surveys-title">
-      <div class="wrap">
-        <div class="section-head"><div><p class="kicker">MISTA research study</p><h2 id="study-surveys-title">Participating in the study?</h2></div><p>Research participation is voluntary and separate from Challenge points. If you choose to participate, complete Consent and Enrollment first, then the Entry Survey. Have your Research Study ID ready.</p></div>
-        <div class="study-survey-links"><a class="btn btn-outline" href="https://forms.cloud.microsoft/r/0FL65pwT83" target="_blank" rel="noopener noreferrer">MISTA Challenge Research Consent and Enrollment – Fill out form <svg class="icon" aria-hidden="true"><use href="#i-external"/></svg><span class="sr-only"> (opens in a new tab)</span></a><a class="btn btn-primary" href="https://forms.cloud.microsoft/r/h4UMn7Mh1H" target="_blank" rel="noopener noreferrer">MISTA Challenge Entry Survey – Fill out form <svg class="icon" aria-hidden="true"><use href="#i-external"/></svg><span class="sr-only"> (opens in a new tab)</span></a></div>
-        <p class="study-exit">The Exit Survey is available December 24, 2026 through January 8, 2027 for enrolled participants. <a class="text-link" href="https://forms.cloud.microsoft/r/DE3V12kV0m" target="_blank" rel="noopener noreferrer">MISTA Challenge Exit Survey – Fill out form <svg class="icon" aria-hidden="true"><use href="#i-external"/></svg><span class="sr-only"> (opens in a new tab)</span></a></p>
-      </div>
-    </section>
-
-
     <section class="section badge-section" id="participation-badge" aria-labelledby="badge-title">
       <div class="wrap badge-grid">
         <figure class="badge-art">
@@ -633,6 +621,25 @@
       </div>
     </section>
 
+    <section class="section dates-section" id="dates" aria-labelledby="dates-title">
+      <div class="wrap">
+        <div class="section-head"><div><p class="kicker">Two rounds. Two fresh starts.</p><h2 id="dates-title">Make a plan for<br>your semester.</h2></div><p>Proposed dates for 2026–27. Your completion date determines the round, even if you submit the evidence later.</p></div>
+        <div class="rounds">
+          <article class="round"><div class="round-label"><h3>Fall 2026</h3><span class="kicker">Round 01</span></div><dl><div><dt>Earn points</dt><dd>Aug. 26–Dec. 23, 2026</dd></div><div><dt>Club launch</dt><dd>Oct. 26, 2026</dd></div><div><dt>Submit evidence</dt><dd>Jan. 8, 2027<span>By 11:59 p.m. Eastern</span></dd></div><div><dt>Final results</dt><dd>Jan. 22, 2027<span>Recognition at the next club meeting</span></dd></div></dl></article>
+          <article class="round spring"><div class="round-label"><h3>Spring 2027</h3><span class="kicker">Round 02</span></div><dl><div><dt>Earn points</dt><dd>Dec. 24, 2026–Apr. 16, 2027</dd></div><div><dt>Club relaunch</dt><dd>Jan. 11, 2027</dd></div><div><dt>Submit evidence</dt><dd>Apr. 18, 2027<span>Deadline time to be confirmed</span></dd></div><div><dt>Recognition target</dt><dd>Apr. 26, 2027</dd></div></dl></article>
+        </div>
+        <p class="date-note">Fall work completed before the launch can qualify. Winter-break achievements completed after December 23 count toward spring. A new presentation of an earlier poster can earn presentation points; the original poster earns creation points only once.</p>
+      </div>
+    </section>
+
+    <section class="section study-section" id="study-surveys" aria-labelledby="study-surveys-title">
+      <div class="wrap">
+        <div class="section-head"><div><p class="kicker">MISTA research study</p><h2 id="study-surveys-title">Participating in the study?</h2></div><p>Research participation is voluntary and separate from Challenge points. If you choose to participate, complete Consent and Enrollment first, then the Entry Survey. Have your Research Study ID ready.</p></div>
+        <div class="study-survey-links"><a class="btn btn-outline" href="https://forms.cloud.microsoft/r/0FL65pwT83" target="_blank" rel="noopener noreferrer">MISTA Challenge Research Consent and Enrollment – Fill out form <svg class="icon" aria-hidden="true"><use href="#i-external"/></svg><span class="sr-only"> (opens in a new tab)</span></a><a class="btn btn-primary" href="https://forms.cloud.microsoft/r/h4UMn7Mh1H" target="_blank" rel="noopener noreferrer">MISTA Challenge Entry Survey – Fill out form <svg class="icon" aria-hidden="true"><use href="#i-external"/></svg><span class="sr-only"> (opens in a new tab)</span></a></div>
+        <p class="study-exit">The Exit Survey is available December 24, 2026 through January 8, 2027 for enrolled participants. <a class="text-link" href="https://forms.cloud.microsoft/r/DE3V12kV0m" target="_blank" rel="noopener noreferrer">MISTA Challenge Exit Survey – Fill out form <svg class="icon" aria-hidden="true"><use href="#i-external"/></svg><span class="sr-only"> (opens in a new tab)</span></a></p>
+      </div>
+    </section>
+
     <section class="section" id="how-it-works" aria-labelledby="how-title">
       <div class="wrap">
         <div class="intro-heading"><div><p class="kicker eyebrow">The challenge</p><h2 id="how-title">Make your<br>progress count.</h2></div><p>Choose a goal that matters to you. <span class="mista-wordmark compact mista-inline" aria-label="MISTA"><span class="m">M</span><span class="i">I</span><span class="s">S</span><span class="t">T</span><span class="a">A</span></span> membership and Data4Good registration are optional. Butler students compete individually, team projects are welcome, and invited guests can participate.</p></div>
@@ -644,21 +651,7 @@
       </div>
     </section>
 
-    <section class="section leaderboard-section" id="leaderboard" aria-labelledby="leaderboard-title">
-      <div class="wrap">
-        <div class="section-head"><div><p class="kicker">The leaderboard</p><h2 id="leaderboard-title">The work adds up.</h2></div><p>See reviewer-approved points from participants who opt in to public display. New submissions stay private until review; choosing a display name or alias—or opting out—does not affect points.</p></div>
-        <div class="board">
-          <div class="board-heading"><h3>Semester standings</h3><span class="status-label" id="board-status"><span class="dot" aria-hidden="true"></span><span id="board-status-text">Coming soon</span></span><a class="text-link" id="board-open" href="#leaderboard" target="_blank" rel="noopener noreferrer" hidden>Open full leaderboard <svg class="icon" aria-hidden="true"><use href="#i-external"/></svg><span class="sr-only"> (opens in a new tab)</span></a></div>
-          <div id="board-pending">
-            <div class="board-columns" aria-hidden="true"><span>Rank</span><span>Participant</span><span>Learning</span><span>Skills</span><span>Applied</span><span>Total</span></div>
-            <div class="board-empty"><div class="board-symbol"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg></div><h3>Your next achievement belongs here.</h3><p>The public board updates after reviewers approve points and the participant opts in to public listing. New submissions, personal details and evidence stay private. Explore the catalog and start building your next achievement.</p><a class="text-link" href="#earn-points">Explore ways to earn <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a></div>
-          </div>
-          <div id="board-embed" hidden></div>
-          <p class="board-help" id="board-help" hidden>If the report does not appear, use “Open full leaderboard” above. Restricted reports may require an authorized Google account.</p>
-          <div class="board-footer"><span><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg>Only reviewed and approved points</span><span>Choose a display name or alias—or opt out</span><span>Public scores update after review</span></div>
-        </div>
-      </div>
-    </section>
+
 
     <section class="section catalog-section" id="earn-points" aria-labelledby="catalog-title">
       <div class="wrap">
@@ -816,23 +809,23 @@
       </div>
     </section>
 
-    <section class="section dates-section" id="dates" aria-labelledby="dates-title">
+    <section class="section leaderboard-section" id="leaderboard" aria-labelledby="leaderboard-title">
       <div class="wrap">
-        <div class="section-head"><div><p class="kicker">Two rounds. Two fresh starts.</p><h2 id="dates-title">Make a plan for<br>your semester.</h2></div><p>Proposed dates for 2026–27. Your completion date determines the round, even if you submit the evidence later.</p></div>
-        <div class="rounds">
-          <article class="round"><div class="round-label"><h3>Fall 2026</h3><span class="kicker">Round 01</span></div><dl><div><dt>Earn points</dt><dd>Aug. 26–Dec. 23, 2026</dd></div><div><dt>Club launch</dt><dd>Oct. 26, 2026</dd></div><div><dt>Submit evidence</dt><dd>Jan. 8, 2027<span>By 11:59 p.m. Eastern</span></dd></div><div><dt>Final results</dt><dd>Jan. 22, 2027<span>Recognition at the next club meeting</span></dd></div></dl></article>
-          <article class="round spring"><div class="round-label"><h3>Spring 2027</h3><span class="kicker">Round 02</span></div><dl><div><dt>Earn points</dt><dd>Dec. 24, 2026–Apr. 16, 2027</dd></div><div><dt>Club relaunch</dt><dd>Jan. 11, 2027</dd></div><div><dt>Submit evidence</dt><dd>Apr. 18, 2027<span>Deadline time to be confirmed</span></dd></div><div><dt>Recognition target</dt><dd>Apr. 26, 2027</dd></div></dl></article>
+        <div class="section-head"><div><p class="kicker">The leaderboard</p><h2 id="leaderboard-title">The work adds up.</h2></div><p>See reviewer-approved points from participants who opt in to public display. New submissions stay private until review; choosing a display name or alias—or opting out—does not affect points.</p></div>
+        <div class="board">
+          <div class="board-heading"><h3>Semester standings</h3><span class="status-label"><span class="dot" aria-hidden="true"></span><span id="board-status-text" aria-live="polite">Snapshot loading</span></span></div>
+          <div id="board-pending">
+            <div class="board-empty"><div class="board-symbol"><svg class="icon" aria-hidden="true"><use href="#i-chart"/></svg></div><h3>Your next achievement belongs here.</h3><p>The public board shows a dated snapshot of reviewer-approved points from participants who opt in to public listing. New submissions, personal details and evidence stay private. Explore the catalog and start building your next achievement.</p><a class="text-link" href="#earn-points">Explore ways to earn <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a></div>
+          </div>
+          <p class="board-updated" id="board-updated" hidden></p>
+          <div id="board-snapshot" hidden></div>
+          <p class="board-error" id="board-error" role="status" hidden>The public standings could not be loaded. Please try again later.</p>
+          <div class="board-footer"><span><svg class="icon" aria-hidden="true"><use href="#i-shield"/></svg>Only reviewed and approved points</span><span>Choose a display name or alias—or opt out</span><span>Public scores update after review</span></div>
         </div>
-        <p class="date-note">Fall work completed before the launch can qualify. Winter-break achievements completed after December 23 count toward spring. A new presentation of an earlier poster can earn presentation points; the original poster earns creation points only once.</p>
       </div>
     </section>
 
-    <section class="section submission dark" id="submit" aria-labelledby="submit-title">
-      <div class="wrap submission-grid">
-        <div><p class="kicker eyebrow">Keep your progress moving</p><h2 id="submit-title">Earn it.<br>Share it.<br>Keep growing.</h2><p class="submission-copy">Completed something you are proud of? Keep the evidence and submit one achievement at a time. Your points appear after review.</p><ul class="submission-checklist"><li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>A certificate, issued badge or accessible artifact link</li><li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>The activity title and its completion date</li><li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Your contribution, if the work was a team effort</li></ul></div>
-        <div class="submit-card"><p class="kicker">Submit an achievement</p><h3 id="submit-card-title">Your next points<br>start here.</h3><p id="submission-message">The submission form is not open yet. Save your evidence; the Tally form link will appear here when submissions open.</p><button type="button" id="submission-unavailable" class="btn" disabled>Update my points <svg class="icon" aria-hidden="true"><use href="#i-external"/></svg></button><a class="btn btn-dark" id="submission-ready" href="#submit" data-tally-link hidden>Update my points <svg class="icon" aria-hidden="true"><use href="#i-external"/></svg></a><span class="form-footnote" id="submission-footnote">Submissions opening soon</span><a class="text-link" href="mailto:mconfuorto@butler.edu?subject=MISTA%20Challenge%20question">Have a question? Contact the club <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a></div>
-      </div>
-    </section>
+
 
     <section class="section faq-section" id="faq" aria-labelledby="faq-title">
       <div class="wrap">
@@ -874,26 +867,28 @@
       const config = window.MISTA_CONFIG || {};
       const byId = id => document.getElementById(id);
 
-      // Only public HTTPS form/report destinations are accepted. No SDK,
-      // credentials, API calls, cookies or local storage are used by this page.
-      function approvedURL(value, kind) {
+      // The public snapshot is fetched only from this site's own origin.
+      function approvedSnapshotURL(value) {
+        if (typeof value !== "string" || !value.trim()) return null;
+        try {
+          const url = new URL(value.trim(), window.location.href);
+          if (url.origin !== window.location.origin || url.protocol !== window.location.protocol || url.username || url.password) return null;
+          return url.href;
+        } catch (_) {return null;}
+      }
+
+      function approvedTallyURL(value) {
         if (typeof value !== "string" || !value.trim()) return null;
         try {
           const url = new URL(value.trim());
           if (url.protocol !== "https:" || url.username || url.password || url.port) return null;
-          if (kind === "tally") {
-            if (!["tally.so", "www.tally.so"].includes(url.hostname) || !/^\/r\/[A-Za-z0-9_-]+\/?$/.test(url.pathname)) return null;
-          } else {
-            if (!["datastudio.google.com", "lookerstudio.google.com"].includes(url.hostname)) return null;
-            const pattern = kind === "embed" ? /^\/embed\/reporting\/[^/]+/ : /^\/reporting\/[^/]+/;
-            if (!pattern.test(url.pathname)) return null;
-          }
+          if (!["tally.so", "www.tally.so"].includes(url.hostname) || !/^\/r\/[A-Za-z0-9_-]+\/?$/.test(url.pathname)) return null;
           return url.href;
         } catch (_) {return null;}
       }
 
       if (config.SHOW_DRAFT_NOTICE === false) byId("draft-notice").hidden = true;
-      const tallyURL = approvedURL(config.TALLY_FORM_URL, "tally");
+      const tallyURL = approvedTallyURL(config.TALLY_FORM_URL);
       if (tallyURL) {
         document.querySelectorAll("[data-tally-link]").forEach(link => {
           link.href = tallyURL;
@@ -901,33 +896,120 @@
           link.rel = "noopener noreferrer";
           link.setAttribute("aria-label", "Update my points in Tally (opens in a new tab)");
         });
-        byId("submission-unavailable").hidden = true;
-        byId("submission-ready").hidden = false;
-        byId("submission-message").textContent = "Submit one achievement at a time in the Tally form. Include your evidence and completion date so reviewers can award the right points.";
-        byId("submission-footnote").textContent = "Opens the Tally submission form in a new tab";
       } else if (config.TALLY_FORM_URL) {
         console.warn("MISTA: use the published HTTPS Tally Share URL, such as tally.so/r/your-form-id.");
       }
 
-      const embedURL = approvedURL(config.LEADERBOARD_EMBED_URL, "embed");
-      if (embedURL) {
-        const frame = document.createElement("iframe");
-        frame.className = "report-frame";
-        frame.title = "MISTA Challenge semester leaderboard";
-        frame.loading = "lazy";
-        frame.allowFullscreen = true;
-        frame.referrerPolicy = "strict-origin-when-cross-origin";
-        frame.src = embedURL;
-        byId("board-embed").appendChild(frame);
-        byId("board-embed").hidden = false;
+      function validateLeaderboardSnapshot(snapshot) {
+        if (!snapshot || typeof snapshot !== "object" || typeof snapshot.snapshotDate !== "string" ||
+            !/^\d{4}-\d{2}-\d{2}$/.test(snapshot.snapshotDate)) {
+          throw new Error("Snapshot date is missing or invalid.");
+        }
+        const snapshotTime = Date.parse(snapshot.snapshotDate + "T00:00:00Z");
+        if (!Number.isFinite(snapshotTime) || new Date(snapshotTime).toISOString().slice(0, 10) !== snapshot.snapshotDate) {
+          throw new Error("Snapshot date is not a real calendar date.");
+        }
+        if (!Array.isArray(snapshot.rounds) || snapshot.rounds.length === 0) {
+          throw new Error("Snapshot has no rounds.");
+        }
+        snapshot.rounds.forEach(round => {
+          if (!round || typeof round.name !== "string" || !round.name.trim() || !Array.isArray(round.standings)) {
+            throw new Error("Snapshot contains an invalid round.");
+          }
+          round.standings.forEach(row => {
+            const pointFields = ["verifiedSkills", "learningAndBadges", "appliedAnalytics", "totalPoints"];
+            if (!row || !Number.isSafeInteger(row.rank) || row.rank < 1 || typeof row.displayName !== "string" || !row.displayName.trim() ||
+                pointFields.some(field => !Number.isSafeInteger(row[field]) || row[field] < 0) ||
+                row.totalPoints !== row.verifiedSkills + row.learningAndBadges + row.appliedAnalytics) {
+              throw new Error("Snapshot contains an invalid leaderboard row.");
+            }
+          });
+        });
+        return snapshot;
+      }
+
+      function renderLeaderboardSnapshot(snapshot) {
+        const headers = ["Rank", "Participant", "Verified skills", "Learning & badges", "Applied analytics", "Total"];
+        const fragment = document.createDocumentFragment();
+        snapshot.rounds.forEach((round, index) => {
+          const section = document.createElement("section");
+          section.className = "board-round";
+          section.setAttribute("aria-labelledby", "board-round-" + index);
+          const title = document.createElement("h4");
+          title.id = "board-round-" + index;
+          title.textContent = round.name;
+          section.appendChild(title);
+
+          const tableWrap = document.createElement("div");
+          tableWrap.className = "board-table-wrap";
+          tableWrap.tabIndex = 0;
+          tableWrap.setAttribute("role", "region");
+          tableWrap.setAttribute("aria-label", round.name + " standings; scroll horizontally to see every category");
+          const table = document.createElement("table");
+          table.className = "board-table";
+          const caption = document.createElement("caption");
+          caption.className = "sr-only";
+          caption.textContent = round.name + " standings";
+          table.appendChild(caption);
+
+          const head = document.createElement("thead");
+          const headRow = document.createElement("tr");
+          headers.forEach(label => {
+            const cell = document.createElement("th");
+            cell.scope = "col";
+            cell.textContent = label;
+            headRow.appendChild(cell);
+          });
+          head.appendChild(headRow);
+          table.appendChild(head);
+
+          const body = document.createElement("tbody");
+          round.standings.forEach(row => {
+            const tableRow = document.createElement("tr");
+            [row.rank, row.displayName, row.verifiedSkills, row.learningAndBadges, row.appliedAnalytics, row.totalPoints].forEach((value, cellIndex) => {
+              const cell = document.createElement(cellIndex === 1 ? "th" : "td");
+              if (cellIndex === 1) cell.scope = "row";
+              cell.textContent = String(value);
+              tableRow.appendChild(cell);
+            });
+            body.appendChild(tableRow);
+          });
+          table.appendChild(body);
+          tableWrap.appendChild(table);
+          section.appendChild(tableWrap);
+          fragment.appendChild(section);
+        });
+        byId("board-snapshot").replaceChildren(fragment);
+        const formattedDate = new Intl.DateTimeFormat("en-US", {year:"numeric",month:"long",day:"numeric",timeZone:"UTC"})
+          .format(new Date(snapshot.snapshotDate + "T00:00:00Z"));
+        byId("board-updated").textContent = "Snapshot as of " + formattedDate + ".";
         byId("board-pending").hidden = true;
-        byId("board-status").hidden = true;
-        byId("board-help").hidden = false;
-        const viewURL = approvedURL(config.LEADERBOARD_VIEW_URL, "view") || embedURL.replace("/embed/reporting/", "/reporting/");
-        byId("board-open").href = viewURL;
-        byId("board-open").hidden = false;
-      } else if (config.LEADERBOARD_EMBED_URL) {
-        console.warn("MISTA: use the generated Google Data Studio HTTPS embed URL, not a normal report share link.");
+        byId("board-error").hidden = true;
+        byId("board-snapshot").hidden = false;
+        byId("board-updated").hidden = false;
+        byId("board-status-text").textContent = "Snapshot available";
+      }
+
+      const snapshotURL = approvedSnapshotURL(config.LEADERBOARD_SNAPSHOT_URL);
+      if (!snapshotURL) {
+        byId("board-pending").hidden = true;
+        byId("board-error").hidden = false;
+        byId("board-status-text").textContent = "Snapshot unavailable";
+        console.error("MISTA: configure the leaderboard snapshot with a same-origin URL.");
+      } else {
+        fetch(snapshotURL, {cache:"no-cache"})
+          .then(response => {
+            if (!response.ok) throw new Error("HTTP " + response.status);
+            return response.json();
+          })
+          .then(validateLeaderboardSnapshot)
+          .then(renderLeaderboardSnapshot)
+          .catch(error => {
+            console.error("MISTA: leaderboard snapshot could not be loaded or validated.", error);
+            byId("board-pending").hidden = true;
+            byId("board-error").hidden = false;
+            byId("board-status-text").textContent = "Snapshot unavailable";
+          });
       }
 
       // Progressive enhancement: the full catalog is static HTML. If scripts

@@ -1,0 +1,26 @@
+{
+  "snapshotDate": "2026-11-19",
+  "rounds": [
+    {
+      "name": "Fall 2026",
+      "standings": [
+        {
+          "rank": 1,
+          "displayName": "Kimbo",
+          "verifiedSkills": 50,
+          "learningAndBadges": 10,
+          "appliedAnalytics": 0,
+          "totalPoints": 60
+        },
+        {
+          "rank": 2,
+          "displayName": "Prof L",
+          "verifiedSkills": 50,
+          "learningAndBadges": 0,
+          "appliedAnalytics": 10,
+          "totalPoints": 60
+        }
+      ]
+    }
+  ]
+}
