@@ -29,3 +29,18 @@ Run the unit tests with:
 ```powershell
 python -m unittest discover -s scripts -p "test_*.py"
 ```
+
+## Public leaderboard endpoint
+
+`mista_leaderboard_webapp.gs` serves the opted-in, aggregate rows from the
+leaderboard worksheet as a dated JSON snapshot. Add its code to the existing
+Apps Script project (in `Code.gs` or a separate `.gs` file), then deploy a web
+app that executes as the project owner and is accessible to anyone. The
+handler exposes only round, display name, approved category totals, total
+points, rank, and snapshot date; it never reads the private intake worksheet.
+
+Set `LEADERBOARD_SNAPSHOT_URL` in `MISTA_Challenge.html` to the deployed web app
+URL. The page uses a fixed JSONP callback for the cross-origin request. The
+existing time-driven publisher refreshes the aggregate worksheet; the page
+reads the latest public snapshot when opened, without a separate JSON-file
+commit or site deployment.

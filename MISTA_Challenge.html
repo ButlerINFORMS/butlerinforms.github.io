@@ -15,10 +15,10 @@
   2. Add this navigation link to the existing club pages:
        <a href="MISTA_Challenge.html">MISTA Challenge</a>
   3. Set TALLY_FORM_URL below to your published Tally form's Share URL.
-  4. After the Apps Script updates MISTA_Leaderboard, verify public opt-in and
-     copy only the round, display name or alias, approved category totals, and
-     total into data/mista-leaderboard.json. Update snapshotDate and publish
-     the site. Never copy emails, evidence links, or raw intake rows.
+  4. Add scripts/mista_leaderboard_webapp.gs to the Apps Script project and
+     deploy it as a web app that executes as its owner and is accessible to
+     anyone. Set LEADERBOARD_SNAPSHOT_URL below to the deployment URL. The
+     endpoint returns only the opted-in public leaderboard fields.
   5. Finalize the proposed activity values and dates in the HTML, then set
      SHOW_DRAFT_NOTICE to false. That switch hides ONLY the top notice;
      edit the other visible "proposed" labels when the rules are approved.
@@ -26,8 +26,8 @@
   If the snapshot cannot load, the page shows an unavailable state. Its
   "Update my points" navigation links become external Tally links when a valid
   form URL is supplied.
-  The public leaderboard is a static, dated snapshot. It does not expose or
-  query the private spreadsheet.
+  The public leaderboard is a dated snapshot served by a read-only Apps Script
+  web app. It reads only the aggregate leaderboard worksheet, not intake data.
 
   PUBLIC DATA BOUNDARY
   Publish only reviewed, approved points for students who explicitly opt in
@@ -58,7 +58,7 @@
   <script>
     window.MISTA_CONFIG = Object.freeze({
       TALLY_FORM_URL: "https://tally.so/r/5X9Ybb",
-      LEADERBOARD_SNAPSHOT_URL: "data/mista-leaderboard.json",
+      LEADERBOARD_SNAPSHOT_URL: "https://script.google.com/macros/s/AKfycbyU3WiVEn1xPpku4cbxJYrQy2hiWMJI1JbqfH-vDNudebVIAomuTpV3Q02DOJDCj6Hx/exec",
       SHOW_DRAFT_NOTICE: false
     });
   </script>
@@ -907,14 +907,52 @@
       const config = window.MISTA_CONFIG || {};
       const byId = id => document.getElementById(id);
 
-      // The public snapshot is fetched only from this site's own origin.
+      // The public snapshot may come from this site or the approved Apps Script endpoint.
       function approvedSnapshotURL(value) {
         if (typeof value !== "string" || !value.trim()) return null;
         try {
           const url = new URL(value.trim(), window.location.href);
-          if (url.origin !== window.location.origin || url.protocol !== window.location.protocol || url.username || url.password) return null;
+          const sameOrigin = url.origin === window.location.origin && url.protocol === window.location.protocol;
+          const appsScript = url.protocol === "https:" && url.hostname === "script.google.com" &&
+            /^\/macros\/s\/[A-Za-z0-9_-]+\/exec\/?$/.test(url.pathname);
+          if ((!sameOrigin && !appsScript) || url.username || url.password || url.port) return null;
           return url.href;
         } catch (_) {return null;}
+      }
+
+      function loadLeaderboardSnapshot(url) {
+        if (new URL(url).origin === window.location.origin) {
+          return fetch(url, {cache:"no-cache"}).then(response => {
+            if (!response.ok) throw new Error("HTTP " + response.status);
+            return response.json();
+          });
+        }
+
+        return new Promise((resolve, reject) => {
+          const callbackName = "mistaLeaderboardSnapshotCallback";
+          const requestURL = new URL(url);
+          requestURL.searchParams.set("callback", callbackName);
+          requestURL.searchParams.set("_", String(Date.now()));
+          const script = document.createElement("script");
+          let settled = false;
+          const finish = (error, snapshot) => {
+            if (settled) return;
+            settled = true;
+            window.clearTimeout(timeout);
+            delete window[callbackName];
+            script.remove();
+            if (error) reject(error);
+            else resolve(snapshot);
+          };
+          const timeout = window.setTimeout(
+            () => finish(new Error("Timed out loading the leaderboard snapshot.")),
+            15000
+          );
+          window[callbackName] = snapshot => finish(null, snapshot);
+          script.onerror = () => finish(new Error("Could not load the leaderboard endpoint."));
+          script.src = requestURL.href;
+          document.head.appendChild(script);
+        });
       }
 
       function approvedTallyURL(value) {
@@ -1035,13 +1073,9 @@
         byId("board-pending").hidden = true;
         byId("board-error").hidden = false;
         byId("board-status-text").textContent = "Snapshot unavailable";
-        console.error("MISTA: configure the leaderboard snapshot with a same-origin URL.");
+        console.error("MISTA: configure the leaderboard snapshot with a same-origin JSON or Apps Script web-app URL.");
       } else {
-        fetch(snapshotURL, {cache:"no-cache"})
-          .then(response => {
-            if (!response.ok) throw new Error("HTTP " + response.status);
-            return response.json();
-          })
+        loadLeaderboardSnapshot(snapshotURL)
           .then(validateLeaderboardSnapshot)
           .then(renderLeaderboardSnapshot)
           .catch(error => {
