@@ -193,12 +193,15 @@
     .board-round {padding:20px 28px 0}
     .board-round h4 {font-size:20px;margin-bottom:12px}
     .board-table-wrap {overflow-x:auto}
+    .board-table-wrap.is-scrollable {max-height:27rem;overflow-y:auto;overscroll-behavior:contain}
+    .board-table-wrap.is-scrollable .board-table thead th {position:sticky;top:0;z-index:1;background:var(--white)}
     .board-table {width:100%;min-width:700px;border-collapse:collapse;font-size:16px}
     .board-table th,.board-table td {padding:13px 10px;border-bottom:1px solid #e4eaf0;text-align:right}
     .board-table thead th {font-size:15px;letter-spacing:.04em;text-transform:uppercase;color:#556675}
     .board-table th:first-child,.board-table td:first-child {width:65px;text-align:left}
     .board-table th:nth-child(2),.board-table td:nth-child(2) {text-align:left}
     .board-table tbody th {font-weight:700}
+    .board-table tbody td:last-child {font-weight:700}
     .board-table tbody tr:last-child th,.board-table tbody tr:last-child td {border-bottom:0}
     .board-updated {padding:16px 28px 0;color:#475869;font-size:15px}
     .board-empty {padding:46px 25px 50px;display:flex;align-items:center;text-align:center;flex-direction:column}
@@ -1022,7 +1025,11 @@
           tableWrap.className = "board-table-wrap";
           tableWrap.tabIndex = 0;
           tableWrap.setAttribute("role", "region");
-          tableWrap.setAttribute("aria-label", round.name + " standings; scroll horizontally to see every category");
+          const isScrollable = round.standings.length > 7;
+          if (isScrollable) tableWrap.classList.add("is-scrollable");
+          tableWrap.setAttribute("aria-label", isScrollable
+            ? round.name + " standings; scroll vertically to see all participants and horizontally to see every category"
+            : round.name + " standings; scroll horizontally to see every category");
           const table = document.createElement("table");
           table.className = "board-table";
           const caption = document.createElement("caption");
